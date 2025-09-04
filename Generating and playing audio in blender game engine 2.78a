@@ -1,0 +1,83 @@
+#This program is supposed to generate a sound, and play it all within the BGE for version 2.78a without exporting and importing the data.
+#the problem is that LibLoad() seems to be working improperly here, and I can't put my finger on why.
+#when i give it bytes objects it complains i haven't given it a string and when i give it string objects
+#it complains i didn't give it bytes, so what's going on there?
+import bge
+import math
+import struct
+import wave
+import io
+
+# Audio will contain a long list of samples (i.e. floating point numbers describing the waveform).
+audio = []
+sample_rate = 44100.0
+
+
+def append_silence(duration_milliseconds=500):
+    
+    #Adding silence is easy - we add zeros to the end of our array
+
+    num_samples = duration_milliseconds * (sample_rate / 1000.0)
+
+    for x in range(int(num_samples)): 
+        audio.append(0.0)
+
+    return
+
+
+def append_sinewave(
+        freq=440.0, 
+        duration_milliseconds=500, 
+        volume=1.0):
+    #The sine wave generated here is the standard beep.  If you want something
+    #more aggresive you could try a square or saw tooth waveform.
+
+
+    global audio
+
+    num_samples = duration_milliseconds * (sample_rate / 1000.0);
+
+    for x in range(int(num_samples)):
+        audio.append(volume * math.sin(2 * math.pi * freq * ( x / sample_rate )));
+
+    return
+
+
+def play_beep(frequency, duration, volume):
+    # Generate the waveform data
+    append_sinewave(frequency, duration, volume);
+    append_silence();
+
+
+    # Create a memory buffer to store the waveform data
+    buffer = io.BytesIO();
+
+    # Create a wave file in memory
+    wave_data = wave.open(buffer, "w");
+
+    # Set the wave file parameters
+    nchannels = 1;
+    sampwidth = 2;
+    nframes = len(audio);
+    comptype = "NONE";
+    compname = "not compressed";
+    wave_data.setparams((nchannels, sampwidth, sample_rate, nframes, comptype, compname));
+
+    print(type(wave_data));
+    # Write the waveform data to the wave file
+    for sample in audio:
+        wave_data.writeframes(struct.pack('h', int( sample * 32767.0 )));
+
+    # Close the wave file and retrieve the waveform data as a bytes object
+    wave_data.close();
+    waveform_data = buffer.getvalue();
+
+    # Load the waveform data into memory and play it
+    wave_file = bge.logic.LibLoad(str(waveform_data), 'WAV', 'inmemory');
+
+    bge.logic.startSound(wave_file);
+
+    return
+
+# Play a 440 Hz beep sound with a duration of 500 ms and a volume of 1
+play_beep(440, 500, 1);
