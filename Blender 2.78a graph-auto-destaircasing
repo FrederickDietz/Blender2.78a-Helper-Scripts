@@ -1,0 +1,76 @@
+import bpy
+
+def remove_keyframe_at_frame(obj, data_path="location", array_index=0, frame=92, tol=0.001):
+    """
+    Remove keyframes from the F-Curve of the given object at the specified frame.
+    
+    Parameters:
+      obj         : The Blender object whose F-Curve will be edited.
+      data_path   : The RNA path of the animated property (default "location").
+      array_index : The index within the property array (e.g. 0 for X, 1 for Y, 2 for Z).
+      frame       : The frame at which to remove the keyframe.
+      tol         : Tolerance used when comparing the keyframe's frame number.
+    
+    Returns:
+      True if the operation was performed (or no keyframes were found), False if no action data is available.
+    """
+    # Check if the object has animation data and an action
+    if not (obj.animation_data and obj.animation_data.action):
+        return False
+
+    action = obj.animation_data.action
+
+    # Loop over the F-Curves that match the given data path and array index
+    for fcurve in action.fcurves:
+        if fcurve.data_path == data_path and fcurve.array_index == array_index:
+            # Collect indices of keyframes where the frame number matches (within tolerance)
+            indices = [i for i, kp in enumerate(fcurve.keyframe_points)
+                       if abs(kp.co.x - frame) < tol]
+            # Remove keyframes in reverse order to avoid index issues
+            for i in reversed(indices):
+                fcurve.keyframe_points.remove(fcurve.keyframe_points[i])
+            # Update the fcurve so changes take effect
+            fcurve.update()
+    return True
+
+import bpy
+import math
+print('-'*128)
+# Define a helper function to print F-Curve data.
+def steprectify_fcurve_data():
+    # Ensure there is an active object with animation data.
+    obj = bpy.context.active_object
+    if not obj:
+        print("No active object found.")
+        return
+    if not (obj.animation_data and obj.animation_data.action):
+        print("Active object has no animation data or action.")
+        return
+
+    action = obj.animation_data.action
+
+    # Iterate over each F-Curve in the action.
+    for fcurve in action.fcurves:
+        keyframingtype = fcurve.data_path
+        keyframeindex  = fcurve.array_index
+        # Iterate over the keyframe points in the F-Curve.
+        for keyIndex in range(len(fcurve.keyframe_points)):
+            try:
+                key = fcurve.keyframe_points[keyIndex]
+            
+                if keyIndex > 0:
+                    Lastkey = fcurve.keyframe_points[keyIndex-1]
+                    frame = key.co[0]   # The frame number  
+                    value = key.co[1]   # The value at that frame                
+                    LValue= Lastkey.co[1]
+                    if math.isclose(value,LValue,abs_tol=0.01):
+                        print("Step",frame,[value,LValue],keyframingtype,keyframeindex)
+                    
+                        #this is something like : bpy.ops.graph.delete() but selective.
+                        #to delete *that* specific sector of THAT specific frame-step. .i.e. we do NOT want to delete other parts of it overall.
+                        #if it is for instance scanning x location values and finds a step it'll only remove the part of the keyframe that handles X location and won't touch Y,Z or euler rotation, scale, etc.
+                        remove_keyframe_at_frame(obj, data_path=str(keyframingtype), array_index=keyframeindex, frame=frame)                    
+            except:
+                pass;
+# Call the function to print F-Curve data to the system console.
+steprectify_fcurve_data()
