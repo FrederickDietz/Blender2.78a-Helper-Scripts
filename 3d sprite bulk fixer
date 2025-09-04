@@ -1,0 +1,11 @@
+#This sprite fixer allows you to create halo sprites a little more easily by rotating an object in edit mode and seting the halo without playing with the settings.
+import bpy
+current_mode = bpy.context.object.mode
+if current_mode == "OBJECT":
+    bpy.context.object.active_material.game_settings.face_orientation = 'HALO'
+    bpy.ops.object.editmode_toggle()
+    bpy.ops.transform.rotate(value=1.5708, axis=(1, 0, 0), constraint_axis=(True, False, False), constraint_orientation='GLOBAL', mirror=False, proportional='DISABLED', proportional_edit_falloff='SHARP', proportional_size=1)
+    bpy.ops.transform.rotate(value=1.5708, axis=(0, 0, 1), constraint_axis=(False, False, True), constraint_orientation='GLOBAL', mirror=False, proportional='DISABLED', proportional_edit_falloff='SHARP', proportional_size=1)
+    bpy.ops.object.editmode_toggle()
+else:    
+    print("You must be in Object mode to use this sprite fixer.")```
